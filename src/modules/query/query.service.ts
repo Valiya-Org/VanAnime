@@ -32,7 +32,7 @@ export class QueryService {
     let cacheList = await this.cacheManager.get(bangumiListKey);
 
     if (!cacheList) {
-      cacheList = await fetchCalenderAPI();
+      cacheList = await fetchCalenderAPI(); // TODO 这类连接外部API或者资源站点的，最好之后整合为同一个service
       await this.cacheManager.set(bangumiListKey, cacheList, 600 * 60 * 1000);
     }
 
