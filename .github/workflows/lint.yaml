@@ -10,5 +10,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22.14.0'
-      - run: npm ci
+      - run: |
+          npm ci
+          echo "::error::Did you forget to run 'npm install'?"
       - run: npm run lint:check
