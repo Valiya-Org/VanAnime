@@ -114,15 +114,31 @@ export class QbittorrentService implements OnModuleInit {
   }
 
   async submitNewTask(fileDetails: MagnetFileDetails) {
+    const ctx: Ctx = { ...this.ctx, functionContext: 'submitNewTask' };
     const { filesList, torrentName, infoHash } = fileDetails;
+    this.logService.logWithJSONData(
+      '开始添加新Torrent，infoHash为：',
+      fileDetails.infoHash,
+      ctx,
+    );
     const addResult = await this.addTorrent(torrentName).then();
     // todo 考虑到实际服务器性能和意外情况，建议从硬等待改为短轮询
     await this.delay(3000);
 
     if (addResult) {
+      this.logService.logWithJSONData(
+        '添加Torrent完成，开始获取torrent内容，infoHash为：',
+        fileDetails.infoHash,
+        ctx,
+      );
       const torrentContents = await this.getTorrentContents(infoHash);
 
       if (torrentContents) {
+        this.logService.logWithJSONData(
+          '获取torrent内容完成，开始选择需要下载的文件，infoHash为：',
+          fileDetails.infoHash,
+          ctx,
+        );
         const changePrioResult = await this.changeContentPriority(
           infoHash,
           filesList,
@@ -130,15 +146,29 @@ export class QbittorrentService implements OnModuleInit {
         );
 
         if (changePrioResult) {
+          this.logService.logWithJSONData(
+            '准备工作皆已完成，开始恢复下载，infoHash为：',
+            fileDetails.infoHash,
+            ctx,
+          );
           const resumeResult = await this.resumeQBTask(infoHash);
 
           if (resumeResult) {
+            this.logService.logWithJSONData(
+              'Task添加完成，infoHash为：',
+              fileDetails.infoHash,
+              ctx,
+            );
             return true;
           }
         }
       }
     }
-
+    this.logService.logWithJSONData(
+      'Task添加失败，infoHash为：',
+      fileDetails.infoHash,
+      ctx,
+    );
     return false;
   }
 
