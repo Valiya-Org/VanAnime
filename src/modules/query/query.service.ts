@@ -57,11 +57,7 @@ export class QueryService {
       Array.isArray(cacheList) &&
       cacheList.every((item) => typeof item === 'string')
     ) {
-      this.logService.logWithJSONData(
-        `检查该番剧是否为新番`,
-        searchContent,
-        ctx,
-      );
+      this.logService.logWithData(`检查该番剧是否为新番`, searchContent, ctx);
       const fuseList = new Fuse(cacheList, { threshold: 0.4 });
       const checkResult = this.isCacheHitWithFuzzySearch(
         fuseList,

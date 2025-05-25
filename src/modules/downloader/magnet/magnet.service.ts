@@ -26,7 +26,7 @@ export class MagnetService {
   async parseMagnet(magnet: string) {
     const ctx: Ctx = { ...this.ctx, functionContext: 'parseMagnet' };
     const results = await this.torrentTransformService.parseMagnet(magnet);
-    this.logService.logWithJSONData(`解析完成，结果为:`, results, ctx);
+    this.logService.logWithData(`解析完成，结果为:`, results, ctx);
     const response = new MagnetParseResponseDto(
       HttpStatusCode.Ok,
       true,
@@ -51,7 +51,7 @@ export class MagnetService {
     const result = await this.qbService.submitNewTask(data.details);
 
     if (result) {
-      this.logService.logWithJSONData(
+      this.logService.logWithData(
         `Task提交成功，添加该记录，infoHash为：`,
         infoHash,
         ctx,

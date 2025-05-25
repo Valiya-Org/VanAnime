@@ -68,7 +68,7 @@ export class LogService implements LoggerService {
     this.logger.info(message, ctx);
   }
 
-  logWithJSONData(message: any, data: unknown, ctx?: Ctx) {
+  logWithData(message: any, data: unknown, ctx?: Ctx) {
     this.logger.info(`${message} ${JSON.stringify(data)}`, ctx);
   }
 

@@ -116,7 +116,7 @@ export class QbittorrentService implements OnModuleInit {
   async submitNewTask(fileDetails: MagnetFileDetails) {
     const ctx: Ctx = { ...this.ctx, functionContext: 'submitNewTask' };
     const { filesList, torrentName, infoHash } = fileDetails;
-    this.logService.logWithJSONData(
+    this.logService.logWithData(
       '开始添加新Torrent，infoHash为：',
       fileDetails.infoHash,
       ctx,
@@ -126,7 +126,7 @@ export class QbittorrentService implements OnModuleInit {
     await this.delay(3000);
 
     if (addResult) {
-      this.logService.logWithJSONData(
+      this.logService.logWithData(
         '添加Torrent完成，开始获取torrent内容，infoHash为：',
         fileDetails.infoHash,
         ctx,
@@ -134,7 +134,7 @@ export class QbittorrentService implements OnModuleInit {
       const torrentContents = await this.getTorrentContents(infoHash);
 
       if (torrentContents) {
-        this.logService.logWithJSONData(
+        this.logService.logWithData(
           '获取torrent内容完成，开始选择需要下载的文件，infoHash为：',
           fileDetails.infoHash,
           ctx,
@@ -146,7 +146,7 @@ export class QbittorrentService implements OnModuleInit {
         );
 
         if (changePrioResult) {
-          this.logService.logWithJSONData(
+          this.logService.logWithData(
             '准备工作皆已完成，开始恢复下载，infoHash为：',
             fileDetails.infoHash,
             ctx,
@@ -154,7 +154,7 @@ export class QbittorrentService implements OnModuleInit {
           const resumeResult = await this.resumeQBTask(infoHash);
 
           if (resumeResult) {
-            this.logService.logWithJSONData(
+            this.logService.logWithData(
               'Task添加完成，infoHash为：',
               fileDetails.infoHash,
               ctx,
@@ -164,7 +164,7 @@ export class QbittorrentService implements OnModuleInit {
         }
       }
     }
-    this.logService.logWithJSONData(
+    this.logService.logWithData(
       'Task添加失败，infoHash为：',
       fileDetails.infoHash,
       ctx,
