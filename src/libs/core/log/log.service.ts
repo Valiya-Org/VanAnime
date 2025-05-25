@@ -77,8 +77,8 @@ export class LogService implements LoggerService {
     this.logger.info(`PAYLOAD: ${JSON.stringify(payLoad)}`, ctx);
   }
 
-  logForResponse(message: any, ctx?: Ctx) {
-    this.logger.info(`RESPONSE SENT => ${JSON.stringify(message)}`, ctx);
+  logForResponse(responseData: any, ctx?: Ctx) {
+    this.logger.info(`RESPONSE SENT => ${JSON.stringify(responseData)}`, ctx);
   }
 
   error(message: string, ctx?: Ctx, trace?: string) {
