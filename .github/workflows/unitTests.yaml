@@ -1,5 +1,5 @@
-name: Eslint Check
-# This workflow runs ESLint to check for code quality issues on pull requests.
+name: Unit Tests
+# This workflow runs unit tests on pull requests to ensure code quality.
 on: pull_request
 jobs:
   build:
@@ -11,4 +11,4 @@ jobs:
         with:
           node-version: '22.14.0'
       - run: npm ci
-      - run: npm run lint:check
+      - run: npm run test
