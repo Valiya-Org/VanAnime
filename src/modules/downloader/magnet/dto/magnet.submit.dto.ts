@@ -15,6 +15,9 @@ export class MagnetSubmitDto {
         ],
         torrentName: 'string',
         infoHash: 'string',
+
+
+        
       },
       originMagnet: 'string',
       source: 'string',
