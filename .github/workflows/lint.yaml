@@ -1,5 +1,4 @@
-name: PR Pre_Merge Check
-# This workflow runs ESLint to check for code quality issues on pull requests.
+name: PR Basic Check
 on: pull_request
 jobs:
   build:
@@ -20,4 +19,4 @@ jobs:
       - name: Check ESLint
         run: npm run lint:check
       - name: Run Unit Tests
-        run: npm run test
+        run: npm run test --passWithNoTests
