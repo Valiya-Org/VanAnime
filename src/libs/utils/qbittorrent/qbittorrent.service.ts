@@ -147,7 +147,7 @@ export class QbittorrentService implements OnModuleInit {
 
         if (changePrioResult) {
           this.logService.logWithData(
-            '准备工作皆已完成，开始恢复下载，infoHash为：',
+            '下载任务优先级配置完毕， 等待恢复下载，infoHash为：',
             fileDetails.infoHash,
             ctx,
           );

@@ -26,7 +26,11 @@ export class MagnetService {
   async parseMagnet(magnet: string) {
     const ctx: Ctx = { ...this.ctx, functionContext: 'parseMagnet' };
     const results = await this.torrentTransformService.parseMagnet(magnet);
-    this.logService.logWithData(`解析完成，结果为:`, results, ctx);
+    this.logService.logWithData(
+      `磁力链接/Magnet解析完成，结果为:`,
+      results,
+      ctx,
+    );
     const response = new MagnetParseResponseDto(
       HttpStatusCode.Ok,
       true,

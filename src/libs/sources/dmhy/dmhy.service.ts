@@ -33,7 +33,7 @@ export class DmhyService implements SourceServiceInterface<DMHYSearchContent> {
     try {
       const response = await fetchResources(fetch, fetchQuery);
       const resources = response.resources;
-      this.logService.logWithData(`Dmhy回报的搜索结果：`, fetchQuery, ctx);
+      this.logService.logWithData(`Dmhy回报的搜索结果：`, resources, ctx);
       return resources.map((resource) => {
         return {
           provider: resource.provider,
