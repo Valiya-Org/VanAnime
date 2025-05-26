@@ -1,4 +1,4 @@
-name: PR Pre_merge Check
+name: PR Pre_Merge Check
 # This workflow runs ESLint to check for code quality issues on pull requests.
 on: pull_request
 jobs:

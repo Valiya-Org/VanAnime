@@ -40,7 +40,7 @@
     "@nestjs/swagger": "^11.0.6",
     "@prisma/client": "^6.7.0",
     "animegarden": "^0.5.1",
-    "axios": "^1.8.5",
+    "axios": "^1.8.4",
     "class-validator": "^0.14.1",
     "fuse.js": "^7.1.0",
     "reflect-metadata": "^0.2.2",
