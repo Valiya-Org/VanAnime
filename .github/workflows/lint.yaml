@@ -19,4 +19,4 @@ jobs:
       - name: Check ESLint
         run: npm run lint:check
       - name: Run Unit Tests
-        run: npm run test --passWithNoTests
+        run: npm run test-ci
