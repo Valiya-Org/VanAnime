@@ -1,4 +1,4 @@
-name: Eslint Check
+name: PR Pre_merge Check
 # This workflow runs ESLint to check for code quality issues on pull requests.
 on: pull_request
 jobs:
@@ -10,7 +10,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22.14.0'
-      - run: |
-          npm ci
-          echo "::error::Did you forget to run 'npm install'?"
-      - run: npm run lint:check
+      - name: Check dependencies
+        id: install-deps
+        run: |
+          if ! npm ci; then
+            echo "::error::依赖安装失败，请检查 package.json 和 package-lock.json 是否一致"
+            exit 1
+          fi
+      - name: Check ESLint
+        run: npm run lint:check
+      - name: Run Unit Tests
+        run: npm run test
