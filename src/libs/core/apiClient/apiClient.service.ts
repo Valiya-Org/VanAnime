@@ -54,7 +54,7 @@ export class ApiClientService {
   private handleResponse = (response: AxiosResponse): AxiosResponse => {
     const ctx: Ctx = { ...this.ctx, functionContext: 'handleResponse' };
     this.logService.log(
-      `${response.status} --> ${response.config.method?.toUpperCase()} ${response.config.baseURL}${response.config.url}，RESPONSE <==> ${JSON.stringify(response.data, null, 2)}`,
+      `${response.status} --> ${response.config.method?.toUpperCase()} ${response.config.baseURL}${response.config.url}，RESPONSE <==> ${JSON.stringify(response.data)}`,
       ctx,
     );
     return response;

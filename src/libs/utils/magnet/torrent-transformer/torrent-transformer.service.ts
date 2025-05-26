@@ -37,6 +37,7 @@ export class TorrentTransformerService {
       const client = new this.Webtorrent();
 
       try {
+        this.logService.log(`开始解析磁力链接 ${magnet}`, ctx);
         client.add(magnet, { announce: this.trackerList }, (torrent) => {
           const filesList: MagnetFile[] = torrent.files?.map((file) => ({
             name: file.name,

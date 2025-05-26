@@ -28,11 +28,12 @@ export class DmhyService implements SourceServiceInterface<DMHYSearchContent> {
       pageSize: this.configService.get<number>('DMHY_PAGE_SIZE'),
     };
 
-    this.logService.log(fetchQuery);
+    this.logService.logWithData(`在Dmhy中搜索：`, fetchQuery, ctx);
 
     try {
       const response = await fetchResources(fetchQuery);
       const resources = response.resources;
+      this.logService.logWithData(`Dmhy回报的搜索结果：`, resources, ctx);
       return resources.map((resource) => {
         return {
           provider: resource.provider,
