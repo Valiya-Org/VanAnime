@@ -19,6 +19,7 @@ export class PrismaService
   async onModuleInit() {
     const ctx = { ...this.ctx, functionContext: 'SQLiteConnection' };
     try {
+      this.logService.log('正在建立SQLite数据库连接...', ctx);
       await this.$connect();
       this.logService.log('已成功连接SQLite数据库', ctx);
     } catch (error) {

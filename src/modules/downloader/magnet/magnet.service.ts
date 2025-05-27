@@ -48,14 +48,7 @@ export class MagnetService {
       ctx,
     );
 
-    await this.prisma.torrent.create({
-      data: {
-        ...results,
-        magnet,
-      },
-    });
-
-    this.logService.log(`种子文件${results.infoHash},已保存完成。`, ctx);
+    await this.createNewTorrenttoDB(results, magnet);
 
     const response = new MagnetParseResponseDto(HttpStatusCode.Ok, true, {
       filesList: results.filesList,
@@ -68,7 +61,10 @@ export class MagnetService {
   async submitNewTask(data: MagnetSubmitDto) {
     const ctx: Ctx = { ...this.ctx, functionContext: 'submitNewTask' };
     if (this.storeService.findTask(data.details.infoHash)) {
-      this.logService.warn(`在数据库中发现相同的infoHash：${data.details.infoHash}`, ctx);
+      this.logService.warn(
+        `在数据库中发现相同的infoHash：${data.details.infoHash}`,
+        ctx,
+      );
       const response = new ResponseBase(
         HttpStatusCode.Ok,
         false,
@@ -90,15 +86,32 @@ export class MagnetService {
     return response;
   }
 
+  private async createNewTorrenttoDB(results: ParseResult, magnet: string) {
+    const ctx = { ...this.ctx, functionContext: 'DBCreateNewTorrent' };
+    this.logService.logWithData(
+      `等待数据库建立新Torrent对象，infoHash：`,
+      results.infoHash,
+      ctx,
+    );
+    // Todo, 需要处理数据库键已存在，返回报错的情况
+    await this.prisma.torrent.create({
+      data: {
+        ...results,
+        magnet,
+      },
+    });
+    this.logService.log(`种子文件： ${results.infoHash} 已保存到数据库。`, ctx);
+  }
+
   private async createNewTasktoDB(data: MagnetSubmitDto) {
-    const ctx = { ...this.ctx, functionContext: 'CreateNewTask' };
+    const ctx = { ...this.ctx, functionContext: 'DBCreateNewTask' };
     const torrent = await this.prisma.torrent.findUnique({
       where: { infoHash: data.details.infoHash },
     });
 
     if (!torrent) {
       this.logService.error(
-        `数据库查找${data.details.infoHash}种子文件失败`,
+        `数据库查找：${data.details.infoHash} 种子文件失败`,
         ctx,
       );
       throw new DBTorrenNotFoundException(
@@ -107,6 +120,11 @@ export class MagnetService {
     }
 
     try {
+      this.logService.logWithData(
+        `等待数据库建立新Task对象，infoHash：`,
+        data.details.infoHash,
+        ctx,
+      );
       await this.prisma.task.create({
         data: {
           version: 'v1',
@@ -116,13 +134,13 @@ export class MagnetService {
           torrentId: torrent.id,
         },
       });
-
       this.logService.log(
-        `种子文件${data.details.infoHash}的下载任务已经建立。`,
+        `种子文件： ${data.details.infoHash} 的下载任务已保存到数据库`,
+        ctx,
       );
     } catch (error) {
       this.logService.error(
-        '数据库记录任务失败',
+        `数据库记录任务失败, infoHash：${data.details.infoHash}`,
         ctx,
         (error as Error).message,
       );
