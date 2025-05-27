@@ -7,9 +7,9 @@ import { HttpStatusCode } from 'axios';
 import { ResponseBase } from '../../../libs/dto/response-base.dto';
 import { MagnetSubmitDto } from './dto/magnet.submit.dto';
 import { StoreService } from '../../../libs/core/store/store.service';
+import { LogService } from 'src/libs/core/log/log.service';
+import { Ctx } from 'src/libs/modal/ctx/Ctx';
 import { PrismaService } from '../../../libs/core/db/prisma.service';
-import { LogService } from '../../../libs/core/log/log.service';
-import { Ctx } from '../../../libs/modal/ctx/Ctx';
 import {
   DBCreateNewTaskFailedException,
   DBTorrenNotFoundException,
@@ -32,15 +32,21 @@ export class MagnetService {
     private readonly qbService: QbittorrentService,
     private readonly torrentTransformService: TorrentTransformerService,
     private readonly storeService: StoreService,
-    private readonly prisma: PrismaService,
     private readonly logService: LogService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async parseMagnet(magnet: string) {
-    const ctx = { ...this.ctx, functionContext: 'ParseUserSubmitMagnet' };
+    const ctx = { ...this.ctx, functionContext: 'parseMagnet' };
     const results = (await this.torrentTransformService.parseMagnet(
       magnet,
     )) as ParseResult;
+
+    this.logService.logWithData(
+      `磁力链接/Magnet解析完成，结果为:`,
+      results,
+      ctx,
+    );
 
     await this.prisma.torrent.create({
       data: {
@@ -60,7 +66,9 @@ export class MagnetService {
   }
 
   async submitNewTask(data: MagnetSubmitDto) {
+    const ctx: Ctx = { ...this.ctx, functionContext: 'submitNewTask' };
     if (this.storeService.findTask(data.details.infoHash)) {
+      this.logService.warn(`在数据库中发现相同的infoHash：${data.details.infoHash}`, ctx);
       const response = new ResponseBase(
         HttpStatusCode.Ok,
         false,
