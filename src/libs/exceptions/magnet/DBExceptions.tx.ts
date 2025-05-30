@@ -7,6 +7,12 @@ export class DBTorrenNotFoundException extends BaseException {
   }
 }
 
+export class DBTorrentIsExistedException extends BaseException {
+  constructor(message: string) {
+    super(message, HttpStatusCode.InternalServerError, 5000);
+  }
+}
+
 export class DBCreateNewTaskFailedException extends BaseException {
   constructor(message: string) {
     super(message, HttpStatusCode.InternalServerError, 5000);

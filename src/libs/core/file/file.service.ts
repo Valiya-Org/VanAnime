@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { LogService } from '../log/log.service';
 import * as process from 'node:process';
-import { STORE_PATH, TORRENT_FILE_PATH } from '../../constants/path/core';
+import { TORRENT_FILE_PATH } from '../../constants/path/core';
 import { Ctx } from 'src/libs/modal/ctx/Ctx';
 
 @Injectable()
@@ -16,7 +16,6 @@ export class FileService implements OnApplicationBootstrap {
 
   onApplicationBootstrap() {
     this.folderInit(TORRENT_FILE_PATH);
-    this.fileInit(`${STORE_PATH}/store.json`);
   }
 
   private folderInit(folderPath: string) {
@@ -44,14 +43,5 @@ export class FileService implements OnApplicationBootstrap {
     } else {
       this.logService.log(`文件已存在: ${filePath}`, ctx);
     }
-  }
-
-  getStoreJson(storePath: string) {
-    const rawData = fs.readFileSync(
-      path.join(process.cwd(), storePath),
-      'utf8',
-    );
-
-    return JSON.parse(rawData);
   }
 }
