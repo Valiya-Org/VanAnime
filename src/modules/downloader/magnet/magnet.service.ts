@@ -14,13 +14,7 @@ import {
   DBTorrenNotFoundException,
   DBTorrentIsExistedException,
 } from '../../../libs/exceptions/magnet/DBExceptions.tx';
-
-interface ParseResult {
-  filesList: MagnetFile[];
-  torrentName: string;
-  infoHash: string;
-  torrentSavePath: string;
-}
+import { ParseResult } from '../../../libs/modal/query/parse';
 
 @Injectable()
 export class MagnetService {
