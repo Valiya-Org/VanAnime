@@ -1,13 +1,13 @@
-export interface MagnetFile {
+export type MagnetFile = {
   name: string;
   length: number;
-}
+};
 
-export interface MagnetFileDetails {
+export type MagnetFileDetails = {
   filesList: MagnetFile[];
   torrentName: string;
   infoHash: string;
-}
+};
 
 export interface QBTaskContent {
   availability: number;
@@ -19,3 +19,8 @@ export interface QBTaskContent {
   progress: number;
   size: number;
 }
+
+export type AnimeEpisode = {
+  label: number;
+  files: string[];
+};

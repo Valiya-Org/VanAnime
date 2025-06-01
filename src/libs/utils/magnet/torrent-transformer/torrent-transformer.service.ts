@@ -44,20 +44,20 @@ export class TorrentTransformerService {
             length: file.length,
           }));
 
-          fs.writeFileSync(
-            path.join(
-              process.cwd(),
-              `${TORRENT_FILE_PATH}/${torrent.name}.torrent`,
-            ),
-            torrent.torrentFile,
+          const torrentSavePath = path.join(
+            process.cwd(),
+            `${TORRENT_FILE_PATH}/${torrent.name}.torrent`,
           );
+
+          fs.writeFileSync(torrentSavePath, torrent.torrentFile);
 
           client.destroy();
 
           resolve({
             filesList,
-            name: torrent.name,
+            torrentName: torrent.name,
             infoHash: torrent.infoHash,
+            torrentSavePath,
           });
         });
       } catch (error) {

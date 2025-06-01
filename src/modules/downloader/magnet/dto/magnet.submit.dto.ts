@@ -1,4 +1,7 @@
-import { MagnetFileDetails } from '../../../../libs/modal/magnet/file';
+import {
+  AnimeEpisode,
+  MagnetFileDetails,
+} from '../../../../libs/modal/magnet/file';
 import { IsNotEmpty, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -16,8 +19,6 @@ export class MagnetSubmitDto {
         torrentName: 'string',
         infoHash: 'string',
       },
-      originMagnet: 'string',
-      source: 'string',
     },
   })
   @IsNotEmpty()
@@ -31,4 +32,8 @@ export class MagnetSubmitDto {
   @ApiProperty()
   @IsNotEmpty()
   source: string;
+
+  @ApiProperty()
+  @IsNotEmpty()
+  customEpisodes: AnimeEpisode[];
 }

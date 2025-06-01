@@ -44,6 +44,7 @@ export class QueryService {
     let cacheList = await this.cacheManager.get(bangumiListKey);
 
     if (!cacheList) {
+      cacheList = await fetchCalenderAPI(); // TODO 这类连接外部API或者资源站点的，最好之后整合为同一个service
       //fetchCalenderAPI() 返回当季所有新番的list，并储存在cache中
       this.logService.log(
         `未发现任何新番列表信息缓存，访问源以获取最新的新番列表`,
