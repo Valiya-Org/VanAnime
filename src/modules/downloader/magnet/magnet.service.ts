@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { QbittorrentService } from '../../../libs/utils/qbittorrent/qbittorrent.service';
 import { TorrentTransformerService } from '../../../libs/utils/magnet/torrent-transformer/torrent-transformer.service';
-import { MagnetFile, MagnetFileDetails } from '../../../libs/modal/magnet/file';
+import { MagnetFileDetails } from '../../../libs/modal/magnet/file';
 import { MagnetParseResponseDto } from './dto/magnet.response.dto';
 import { HttpStatusCode } from 'axios';
 import { ResponseBase } from '../../../libs/dto/response-base.dto';
