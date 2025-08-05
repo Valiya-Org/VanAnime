@@ -45,8 +45,8 @@ export class QbittorrentService implements OnModuleInit {
   }
 
   async onModuleInit() {
-    await this.QBlogin();
-    this.initQBConstants();
+    // await this.QBlogin();
+    // this.initQBConstants();
   }
 
   async QBlogin() {
