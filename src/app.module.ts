@@ -1,3 +1,4 @@
+import { FileNameParserModule } from './libs/core/parser/filenameparser.module';
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -15,6 +16,7 @@ import { DBModule } from './libs/core/db/db.module';
 
 @Module({
   imports: [
+    FileNameParserModule,
     QueryModule,
     SourcesModule,
     LogModule,

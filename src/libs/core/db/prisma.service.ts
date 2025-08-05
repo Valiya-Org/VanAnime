@@ -17,15 +17,15 @@ export class PrismaService
   }
 
   async onModuleInit() {
-    const ctx = { ...this.ctx, functionContext: 'SQLiteConnection' };
-    try {
-      this.logService.log('正在建立SQLite数据库连接...', ctx);
-      await this.$connect();
-      this.logService.log('已成功连接SQLite数据库', ctx);
-    } catch (error) {
-      this.logService.error('数据库连接失败', ctx);
-      throw new Error((error as Error).message);
-    }
+    // const ctx = { ...this.ctx, functionContext: 'SQLiteConnection' };
+    // try {
+    //   this.logService.log('正在建立SQLite数据库连接...', ctx);
+    //   await this.$connect();
+    //   this.logService.log('已成功连接SQLite数据库', ctx);
+    // } catch (error) {
+    //   this.logService.error('数据库连接失败', ctx);
+    //   throw new Error((error as Error).message);
+    // }
   }
 
   async onModuleDestroy() {
