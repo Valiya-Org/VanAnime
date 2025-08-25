@@ -5,8 +5,7 @@ import { VanAnimeMetaData } from 'src/libs/modal/parser/VanAnimeMetaData';
 import aniep from 'aniep';
 import { groupDictionary } from '../../modal/parser/Dictionary/GroupDictionary';
 import _ from 'lodash';
-
-type EpisodeInfo = number | number[] | string | null;
+import { EpisodeInfo } from '../../../libs/modal/parser/EpisodeInfo';
 
 @Injectable()
 export class FileNameParserService {
@@ -425,85 +424,8 @@ export class FileNameParserService {
   }
 
   public parseFilename(filename: string): EpisodeInfo {
-    let replacedFileName = filename;
+    const replacedFileName = this.fileNameCleanerForEpiFinder(filename);
     let num = null;
-    replacedFileName = replacedFileName.replace(/[\r\n]$/, ''); // remove extra newlines from end of string
-    replacedFileName = replacedFileName.replace(/((?:\.mp4|\.mkv)+)$/, ''); // remove file extension
-    replacedFileName = replacedFileName.replace(/(v\d)$/i, ''); // remove v2, v3 suffix
-    replacedFileName = replacedFileName.replace(/(\d)v[0-5]/i, '$1'); // remove v2 from 13v2
-    replacedFileName = replacedFileName.replace(/(x|h)26(4|5)/i, ''); // remove x264 and x265
-    replacedFileName = replacedFileName.replace(/\bmp4\b/i, ' '); // remove mp4
-    replacedFileName = replacedFileName.replace(/(8|10)-?bit/i, ''); // remove 10bit and 10-bit
-    replacedFileName = replacedFileName.replace(/全集|\(全集\)|TV全集/gi, '');
-    replacedFileName = replacedFileName.replace(/正片/gi, '');
-    replacedFileName = replacedFileName.replace(/\+\s*特典映像/gi, '');
-    replacedFileName = replacedFileName.replace(
-      /合集(?:\s*[Vv]\d+)?|\(合集(?:\s*[Vv]\d+)?\)/gi,
-      '',
-    );
-    replacedFileName = replacedFileName.replace(
-      /\+\s*OVA(?:\d{1,4}-\d{1,4})?/gi,
-      '',
-    );
-    replacedFileName = replacedFileName.replace(
-      /\+\s*OAD(?:\d{1,4}-\d{1,4})?/gi,
-      '',
-    );
-    replacedFileName = replacedFileName.replace(
-      /\+\s*SP(?:s)?(?:\d{1,4}-\d{1,4})?/gi,
-      '',
-    );
-    replacedFileName = replacedFileName.replace(
-      /\+\s*番外(?:\d{1,4}-\d{1,4})?/gi,
-      '',
-    );
-    replacedFileName = replacedFileName.replace(/\+\s*特典/gi, '');
-    replacedFileName = replacedFileName.replace(/\+\s*剧场版/gi, '');
-    replacedFileName = replacedFileName.replace(/\+\s*Mini/gi, '');
-    replacedFileName = replacedFileName.replace(/精校合集/gi, '');
-    replacedFileName = replacedFileName.replace(
-      /修正合集\s*(?:\s*[Vv]\d+)?/gi,
-      '',
-    );
-    replacedFileName = replacedFileName.replace(/\+\s*EX/gi, '');
-    replacedFileName = replacedFileName.replace(/\+\s*Movie/gi, '');
-    replacedFileName = replacedFileName.replace(
-      /(\d{1,4}-\d{1,4})\s*(?:_)?[Ff]in(?:\s*[Vv]\d+)?\b/,
-      '$1',
-    );
-    replacedFileName = replacedFileName.replace(
-      /(\d{1,4}-\d{1,4})\s*(?:_)?END(?:\s*[Vv]\d+)?\b/,
-      '$1',
-    );
-    replacedFileName = replacedFileName.replace(/全\s*(\d{1,4})\s*集/g, '$1');
-    replacedFileName = replacedFileName.replace(
-      /(\d{1,4}-\d{1,4})全?完?/,
-      '$1',
-    );
-    replacedFileName = replacedFileName.replace(/(\[[0-9a-fA-F]{6,8}])/, '[]'); // remove checksum like [c3cafe11]
-    replacedFileName = replacedFileName.replace(/(\[\d{5,}])/, ''); // remove dates like [20190301]
-    replacedFileName = replacedFileName.replace(/\d\d\d\d-\d\d-\d\d/, ' '); // remove dates like yyyy-mm-dd
-    replacedFileName = replacedFileName.replace(
-      /\d{3,4}\s*(?:x|×)\s*\d{3,4}p?/i,
-      ' ',
-    ); // remove resolutions like 1280x720
-    replacedFileName = replacedFileName.replace(
-      /(?:2160|1080|720|480)(?:p|i)/i,
-      ' ',
-    ); // remove resolutions like 720p or 1080i
-    replacedFileName = replacedFileName.replace(
-      /(?:3840|1920|1280)[-_](?:2160|1080|720)/,
-      ' ',
-    ); // remove resolutions like 1280x720
-    replacedFileName = replacedFileName.replace(/2k|4k/i, ' '); // remove resolutions 2k or 4k
-    replacedFileName = replacedFileName.replace(/((19|20)\d\d)/, ''); // remove years like 1999 or 2019
-    replacedFileName = replacedFileName.replace(/\(BD\)/, ''); // remove resolution like (BD)
-    replacedFileName = replacedFileName.replace(/\(DVD\)/, ''); // remove format like (DVD)
-
-    num = replacedFileName.match(/^(\d{1,4})(?:-|~)(\d{1,4})$/); // 13.mp4
-    if (num !== null) {
-      return [parseFloat(num[1]), parseFloat(num[2])];
-    }
 
     // Map Chinese numerals to digits
     const chineseMap: { [key: string]: number } = {
@@ -524,227 +446,179 @@ export class FileNameParserService {
       十五: 15,
     };
 
-    num = replacedFileName.match(
-      /第([一二三四五六七八九十]+)(?:集|話|话|回|夜|弾)/,
-    ); // 第三話
+    num = filename.match(/第([一二三四五六七八九十]+)(?:集|話|话|回|夜|弾)/); // 第三話
     if (num !== null) {
       return chineseMap[num[1]];
     }
 
-    num = replacedFileName.match(/第? *(\d+)-(\d+) *(?:集|話|话|回|夜|弾)/); // 第 01-13 話
+    num = this.matchLevelOneEpisodeFormatCollection(replacedFileName);
+
     if (num !== null) {
-      return [parseFloat(num[1]), parseFloat(num[2])];
+      return num;
     }
 
-    num = replacedFileName.match(/第? *(\d+(?:\.\d)*) *(?:集|話|话|回|夜|弾)/); // 第 13.5 話
+    num = this.matchLevelTwoEpisodeFormatCollection(replacedFileName);
+
     if (num !== null) {
-      return parseFloat(num[1]);
+      return num;
     }
 
-    num = replacedFileName.match(/(?:s|v)\d{1,2}ep*(\d{1,2})/i); // S03EP13
-    if (num !== null) {
-      return parseFloat(num[1]);
+    return null;
+  }
+
+  private fileNameCleanerForEpiFinder(fileName: string) {
+    fileName = fileName.replace(/[\r\n]$/, ''); // remove extra newlines from end of string
+    fileName = fileName.replace(/((?:\.mp4|\.mkv)+)$/, ''); // remove file extension
+    fileName = fileName.replace(/(v\d)$/i, ''); // remove v2, v3 suffix
+    fileName = fileName.replace(/(\d)v[0-5]/i, '$1'); // remove v2 from 13v2
+    fileName = fileName.replace(/(x|h)26(4|5)/i, ''); // remove x264 and x265
+    fileName = fileName.replace(/\bmp4\b/i, ' '); // remove mp4
+    fileName = fileName.replace(/(8|10)-?bit/i, ''); // remove 10bit and 10-bit
+    fileName = fileName.replace(/全集|\(全集\)|TV全集|\(TV全集\)/gi, ''); // remove 全集 or (全集) or TV全集
+    fileName = fileName.replace(/正片/gi, ''); // remove 正片
+    fileName = fileName.replace(/\+\s*特典映像/gi, ''); // remove +特典映像
+    fileName = fileName.replace(/精校合集/gi, ''); // remove 精校合集
+    fileName = fileName.replace(/修正合集\s*(?:\s*[Vv]\d+)?/gi, ''); // remove 修正合集 or 修正合集 v2
+    fileName = fileName.replace(
+      /合集(?:\s*[Vv]\d+)?|\(合集(?:\s*[Vv]\d+)?\)/gi,
+      '',
+    ); // remove 合集 or 合集 v2 or (合集 v2)
+    fileName = fileName.replace(/\+\s*OVA(?:\d{1,4}-\d{1,4})?/gi, ''); // remove +OVA
+    fileName = fileName.replace(/\+\s*OAD(?:\d{1,4}-\d{1,4})?/gi, ''); // remove +OAD
+    fileName = fileName.replace(/\+\s*SP(?:s)?(?:\d{1,4}-\d{1,4})?/gi, ''); // remove +SPs
+    fileName = fileName.replace(/\+\s*番外(?:\d{1,4}-\d{1,4})?/gi, ''); // remove +番外
+    fileName = fileName.replace(/\+\s*特典/gi, ''); // remove +特典
+    fileName = fileName.replace(/\+\s*剧场版/gi, ''); // remove +剧场版
+    fileName = fileName.replace(/\+\s*Mini/gi, ''); // remove +Mini
+    fileName = fileName.replace(/\+\s*EX/gi, ''); // remove +EX
+    fileName = fileName.replace(/\+\s*Movie/gi, ''); // remove +Movie
+    fileName = fileName.replace(
+      /(\d{1,4}-\d{1,4})\s*(?:_)?[Ff]in(?:\s*[Vv]\d+)?\b/,
+      '$1',
+    ); // remove 01-13 Fin v2
+    fileName = fileName.replace(
+      /(\d{1,4}-\d{1,4})\s*(?:_)?END(?:\s*[Vv]\d+)?\b/,
+      '$1',
+    ); // remove 01-13 END v2
+    fileName = fileName.replace(/全\s*(\d{1,4})\s*集/g, '$1');
+    fileName = fileName.replace(/(\d{1,4}-\d{1,4})全?完?/, '$1'); // remove 01-13全/完
+    fileName = fileName.replace(/(?:TV|EP)(?:\s*)(\d{1,4}-\d{1,4})\b/, '$1'); // remove TV/EP 01-13
+    fileName = fileName.replace(/(?:\d{1,4})月/, ''); // remove month like 1月
+    fileName = fileName.replace(/(\[[0-9a-fA-F]{6,8}])/, '[]'); // remove checksum like [c3cafe11]
+    fileName = fileName.replace(/(\[\d{5,}])/, ''); // remove dates like [20190301]
+    fileName = fileName.replace(/\d\d\d\d-\d\d-\d\d/, ' '); // remove dates like yyyy-mm-dd
+    fileName = fileName.replace(/\d{3,4}\s*(?:x|×)\s*\d{3,4}p?/i, ' '); // remove resolutions like 1280x720
+    fileName = fileName.replace(/(?:2160|1080|720|480)(?:p|i)/i, ' '); // remove resolutions like 720p or 1080i
+    fileName = fileName.replace(/(?:3840|1920|1280)[-_](?:2160|1080|720)/, ' '); // remove resolutions like 1280x720
+    fileName = fileName.replace(/2k|4k/i, ' '); // remove resolutions 2k or 4k
+    fileName = fileName.replace(/((19|20)\d\d)/, ''); // remove years like 1999 or 2019
+    fileName = fileName.replace(/\(BD\)/, ''); // remove resolution like (BD)
+    fileName = fileName.replace(/\(DVD\)/, ''); // remove format like (DVD)
+    fileName = fileName.replace(/【/g, '['); // Unify format 【 to [
+    fileName = fileName.replace(/】/g, ']'); // Unify format 】 to ]
+
+    return fileName;
+  }
+
+  private matchLevelOneEpisodeFormatCollection(fileName: string) {
+    const LevelOneEpisodeFormatCollection = [
+      /^(\d{1,4})(?:-|~)(\d{1,4})$/, // 1234-5678
+      /\[(\d+(?:\.\d)*)(?:-|&|~)(\d+(?:\.\d)*)(?:[\s\S])*]/, // [1234-5678 xxxXXXxx]
+      /第? *(\d+)-(\d+) *(?:集|話|话|回|夜|弾)/, // 第 1-2 集
+      /(?:\s|_)(\d+(?:\.\d)*)(?:-|&|~)(\d+(?:\.\d)*)(?:\s|_)/, // _1-2_ /sss 1-2 sss
+      /\W(\d{1,4})-(\d{1,4})$/, // xxxx01-13.mp4
+      / - (\d+)[-~](\d+)/, // xxxx - 13-26xxxx
+    ];
+    const LevelOneEpisodeFormatCollectionWithTwoGroup = [
+      /\[(\d+)-(\d+)_(\d+)-(\d+)]/, // [1-2_13-14]
+      /\[(\d+)-(\d+)\((\d+)-(\d+)\)]/, // [1-2(13-14)]
+    ];
+    const LevelOneEpisodeFormatCollectionWithExtraEpiInfo = [
+      /\[(\d+)_(\d+)]/, // [1_2]
+      /\[(\d+)(?: |_|-)(?:S\d)(?: |_|-)(\d+)(?: END)*]/i, // xxxx[13 s2-01]xxxx
+      / - (\d{1,4}(?:\.\d)*) *\((?:s\d-)*(\d{1,4}(?:\.\d)*)\)/i, // xxxx - 01.5 (s1-13.5)xxxx
+      /\[(\d+)\((?:EP\.)*(\d+)\)]/i, // xxxx[01(ep.13)]xxxx
+    ];
+
+    let num = null;
+
+    // 遍历 LevelOneEpisodeFormatCollection 中的正则表达式
+    for (const regex of LevelOneEpisodeFormatCollection) {
+      num = fileName.match(regex);
+      if (num !== null) {
+        // 如果匹配成功，返回解析后的集数
+        return [parseFloat(num[1]), parseFloat(num[2])];
+      }
     }
 
-    // special case
-    num = replacedFileName.match(/ - (\d\d(?:\.\d)*) *(?:Fin)* *\[720]/i); // xxxx - 13 [720]
-    if (num !== null) {
-      return parseFloat(num[1]);
-    }
-
-    num = replacedFileName.match(/\[(\d{1,4}(?:\.\d)*) *(?:END)*]/); // [13END]
-    if (num !== null) {
-      return parseFloat(num[1]);
-    }
-
-    num = replacedFileName.match(/\[(\d{1,2})\((?:OVA|OAD)\)]/); // [14(OVA)]
-    if (num !== null) {
-      return parseFloat(num[1]);
-    }
-
-    num = replacedFileName.match(
-      /[^\w\d](?:OVA|OAD|SP|OP|ED|NCOP|NCED|EX|CM|PV|Preview|Yokoku|メニュー|Menu|エンディング|Movie)[-_ ]{0,1}(\d{1,2})[^\w\d]/i,
-    ); // [OVA1]
-    if (num !== null) {
-      return parseFloat(num[1]);
-    }
-
-    num = replacedFileName.match(/【(\d+)】/); // 【13】
-    if (num !== null) {
-      return parseFloat(num[1]);
-    }
-
-    num = replacedFileName.match(/「(\d+)」/); // 「13」
-    if (num !== null) {
-      return parseFloat(num[1]);
-    }
-
-    num = replacedFileName.match(/\[(\d+)-(\d+)\((\d+)-(\d+)\)]/); // xxxx[01-02(13-14)]xxxx
-    if (num !== null) {
-      return [
-        [parseFloat(num[1]), parseFloat(num[2])]
+    // Edge case: 处理一些特殊情况
+    for (const regex of LevelOneEpisodeFormatCollectionWithExtraEpiInfo) {
+      num = fileName.match(regex);
+      if (num !== null) {
+        return [parseFloat(num[1]), parseFloat(num[2])]
           .sort((a, b) => a - b)
-          .join(','),
-        [parseFloat(num[3]), parseFloat(num[4])]
-          .sort((a, b) => a - b)
-          .join(','),
-      ]
-        .sort(
-          (a, b) => parseFloat(a.split(',')[1]) - parseFloat(b.split(',')[1]),
-        )
-        .join('|'); // "1,2|13,14"
+          .join('|');
+      }
     }
 
-    num = replacedFileName.match(/\[(\d+)\((?:EP\.)*(\d+)\)]/i); // xxxx[01(ep.13)]xxxx
-    if (num !== null) {
-      return [parseFloat(num[1]), parseFloat(num[2])]
-        .sort((a, b) => a - b)
-        .join('|');
+    for (const regex of LevelOneEpisodeFormatCollectionWithTwoGroup) {
+      num = fileName.match(regex);
+      if (num !== null) {
+        return [
+          [parseFloat(num[1]), parseFloat(num[2])]
+            .sort((a, b) => a - b)
+            .join(','),
+          [parseFloat(num[3]), parseFloat(num[4])]
+            .sort((a, b) => a - b)
+            .join(','),
+        ]
+          .sort(
+            (a, b) => parseFloat(a.split(',')[1]) - parseFloat(b.split(',')[1]),
+          )
+          .join('|'); // "1,2|13,14"
+      }
     }
 
-    num = replacedFileName.match(
-      /\[(\d+)(?: |_|-)(?:S\d)(?: |_|-)(\d+)(?: END)*]/i,
-    ); // xxxx[13 s2-01]xxxx
-    if (num !== null) {
-      return [parseFloat(num[1]), parseFloat(num[2])]
-        .sort((a, b) => a - b)
-        .join('|');
-    }
+    return null; // 如果没有匹配到任何格式，返回 null
+  }
 
-    num = replacedFileName.match(
-      /\[(\d+(?:\.\d)*)(?:-|&)(\d+(?:\.\d)*)(?:END)*]/,
-    ); // xxxx[01-13END]xxxx
-    if (num !== null) {
-      return [parseFloat(num[1]), parseFloat(num[2])];
-    }
+  private matchLevelTwoEpisodeFormatCollection(
+    fileName: string,
+  ): EpisodeInfo | null {
+    const LevelTwoEpisodeFormatCollection = [
+      /第? *(\d+(?:\.\d)*) *(?:集|話|话|回|夜|弾)/, // 第 13.5 話
+      /(?:s|v)\d{1,2}ep*(\d{1,2})/i, // S03EP13
+      / - (\d\d(?:\.\d)*) *(?:Fin)* *\[(?:720|1080|4K)]/i, // xxxx - 13 [720]
+      /\[(\d{1,4}(?:\.\d)*) *(?:END)*]/, // [13END]
+      /\[(\d{1,2})\((?:OVA|OAD)\)]/, // [14(OVA)]
+      /【(\d+)】/, // 【13】
+      /「(\d+)」/, // 「13」
+      /.+\[(\d{1,4}(?:\.\d)*)[^pPx]{0,4}]/i, // xxxx[13.5yyyy]xxxx
+      /\[(\d{1,4})[ _-].+?]/, // xxxx[13-xxxx]xxxx
+      /[\[][^]+_(\d{1,2})]/, // xxxx[xxxx_13]xxxx
+      / (\d\d) \[/, // xxxx 13 [
+      /(?: |\[|]|-)(\d\d)(?:\[|])/, // xxxx[ 13[xxxx
+      /s\d-(\d{1,2})/i, // xxxxs2-13xxxx
+      /\bE(\d{1,4}(?:\.\d\D)*)\b/, // xxxxE13.5xxxx
+      /(?:EP|Episode|Round)\.? *(\d{1,4}(?:\.\d\D)*)/i, // xxxxEP 13.5xxxx
+      /^(\d{1,4}(?:\.\d)*) - /, // 13.5 - xxxx
+      / - (\d{1,4}(?:\.\d)*)/, // xxxx - 13.5xxxx
+      /^(\d{1,4}(?:\.\d)*)\D/, // 13.5xxxx
+      /(?:#|＃)(\d{1,2})\D/, // xxxx#13xxxx
+      / (\d{1,4}(?:\.\d)*)[^xpP\]\d]{0,4} /, // xxxx 13.5yyyy xxxx
+      /(\d{1,4})$/, // xxxx13.mp4
+      /\D\.(\d{1,3})\.\D/, // xxxx.13.xxxx
+      /\D(\d{1,4}) - /, // xxxx13 - xxxx
+      /(?: |_)(\d{1,3})_/, // xxxx_13_xxxx
+    ];
 
-    num = replacedFileName.match(/\[(\d+)-(\d+)_(\d+)-(\d+)]/); // xxxx[01-02_13-14]xxxx
-    if (num !== null) {
-      return [
-        [parseFloat(num[1]), parseFloat(num[2])]
-          .sort((a, b) => a - b)
-          .join(','),
-        [parseFloat(num[3]), parseFloat(num[4])]
-          .sort((a, b) => a - b)
-          .join(','),
-      ]
-        .sort(
-          (a, b) => parseFloat(a.split(',')[1]) - parseFloat(b.split(',')[1]),
-        )
-        .join('|'); // "1,2|13,14"
-    }
-
-    num = replacedFileName.match(/\[(\d+)_(\d+)]/); // xxxx[01_13]xxxx
-    if (num !== null) {
-      return [parseFloat(num[1]), parseFloat(num[2])]
-        .sort((a, b) => a - b)
-        .join('|');
-    }
-
-    num = replacedFileName.match(
-      / - (\d{1,4}(?:\.\d)*) *\((?:s\d-)*(\d{1,4}(?:\.\d)*)\)/i,
-    ); // xxxx - 01.5 (s1-13.5)xxxx
-    if (num !== null) {
-      return [parseFloat(num[1]), parseFloat(num[2])]
-        .sort((a, b) => a - b)
-        .join('|');
-    }
-
-    num = replacedFileName.match(/.+\[(\d{1,4}(?:\.\d)*)[^pPx]{0,4}]/i); // xxxx[13.5yyyy]xxxx
-    if (num !== null) {
-      return parseFloat(num[1]);
-    }
-
-    num = replacedFileName.match(/\[(\d{1,4})[ _-].+?]/); // xxxx[13-xxxx]xxxx
-    if (num !== null) {
-      return parseFloat(num[1]);
-    }
-
-    num = replacedFileName.match(/\[[^]+_(\d{1,2})]/); // xxxx[xxxx_13]xxxx
-    if (num !== null) {
-      return parseFloat(num[1]);
-    }
-
-    num = replacedFileName.match(/ (\d\d) \[/); // xxxx 13 [
-    if (num !== null) {
-      return parseFloat(num[1]);
-    }
-
-    num = replacedFileName.match(/(?: |\[|]|-)(\d\d)(?:\[|])/); // xxxx[ 13[xxxx
-    if (num !== null) {
-      return parseFloat(num[1]);
-    }
-
-    num = replacedFileName.match(/s\d-(\d{1,2})/i); // xxxxs2-13xxxx
-    if (num !== null) {
-      return parseFloat(num[1]);
-    }
-
-    num = replacedFileName.match(/\bE(\d{1,4}(?:\.\d\D)*)\b/); // xxxxE13.5xxxx
-    if (num !== null) {
-      return parseFloat(num[1]);
-    }
-
-    num = replacedFileName.match(
-      /(?:EP|Episode|Round)\.? *(\d{1,4}(?:\.\d\D)*)/i,
-    ); // xxxxEP 13.5xxxx
-    if (num !== null) {
-      return parseFloat(num[1]);
-    }
-
-    num = replacedFileName.match(/^(\d{1,4}(?:\.\d)*) - /); // 13.5 - xxxx
-    if (num !== null) {
-      return parseFloat(num[1]);
-    }
-
-    num = replacedFileName.match(/ - (\d+)[-~](\d+)/); // xxxx - 13-26xxxx
-    if (num !== null) {
-      return [parseFloat(num[1]), parseFloat(num[2])];
-    }
-
-    num = replacedFileName.match(/ - (\d{1,4}(?:\.\d)*)/); // xxxx - 13.5xxxx
-    if (num !== null) {
-      return parseFloat(num[1]);
-    }
-
-    num = replacedFileName.match(/^(\d{1,4}(?:\.\d)*)\D/); // 13.5xxxx
-    if (num !== null) {
-      return parseFloat(num[1]);
-    }
-
-    num = replacedFileName.match(/(?:#|＃)(\d{1,2})\D/); // xxxx#13xxxx
-    if (num !== null) {
-      return parseFloat(num[1]);
-    }
-
-    num = replacedFileName.match(/ (\d{1,4}(?:\.\d)*)[^xpP\]\d]{0,4} /); // xxxx 13.5yyyy xxxx
-    if (num !== null) {
-      return parseFloat(num[1]);
-    }
-
-    num = replacedFileName.match(/\W(\d{1,4})-(\d{1,4})$/); // xxxx01-13.mp4
-    if (num !== null) {
-      return [parseFloat(num[1]), parseFloat(num[2])];
-    }
-
-    num = replacedFileName.match(/(\d{1,4})$/); // xxxx13.mp4
-    if (num !== null) {
-      return parseFloat(num[1]);
-    }
-
-    num = replacedFileName.match(/\D\.(\d{1,3})\.\D/); // xxxx.13.xxxx
-    if (num !== null) {
-      return parseFloat(num[1]);
-    }
-
-    num = replacedFileName.match(/\D(\d{1,4}) - /); // xxxx13 - xxxx
-    if (num !== null) {
-      return parseFloat(num[1]);
-    }
-
-    num = replacedFileName.match(/(?: |_)(\d{1,3})_/); // xxxx_13_xxxx
-    if (num !== null) {
-      return parseFloat(num[1]);
+    let num = null;
+    // 遍历 LevelTwoEpisodeFormatCollection 中的正则表达式
+    for (const regex of LevelTwoEpisodeFormatCollection) {
+      num = fileName.match(regex);
+      if (num !== null) {
+        return parseFloat(num[1]);
+      }
     }
 
     return null;
