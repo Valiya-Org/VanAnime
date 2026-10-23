@@ -9,6 +9,7 @@ import Fuse from 'fuse.js';
 import { CalenderGetException } from '../../libs/exceptions/query/CalenderGetException';
 import { Ctx } from 'src/libs/modal/ctx/Ctx';
 import { LogService } from 'src/libs/core/log/log.service';
+import { ParserService } from '../../libs/core/parser/parser.service';
 
 @Injectable()
 export class QueryService {
@@ -20,6 +21,7 @@ export class QueryService {
     private readonly sourcesService: SourcesService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private readonly logService: LogService,
+    private readonly titleParser: ParserService,
   ) {}
 
   async search(
@@ -32,8 +34,22 @@ export class QueryService {
     this.logService.log(`使用了${source}源进行搜索`, ctx);
     const searchService = this.sourcesService.getService(source);
 
-    const res = await searchService?.search(searchContent);
-    const response = new QueryResponseDto(HttpStatusCode.Ok, true, res, source);
+    const res = (await searchService?.search(searchContent)) ?? [];
+    // 搜索阶段只有标题，做一次标题解析（无文件结构）
+    const enriched = res.map((item) => {
+      try {
+        return { ...item, parsedTitle: this.titleParser.parse(item.title) };
+      } catch {
+        // 单条解析失败不影响整页搜索结果
+        return { ...item };
+      }
+    });
+    const response = new QueryResponseDto(
+      HttpStatusCode.Ok,
+      true,
+      enriched,
+      source,
+    );
     return response;
   }
 
@@ -44,8 +60,8 @@ export class QueryService {
     let cacheList = await this.cacheManager.get(bangumiListKey);
 
     if (!cacheList) {
-      cacheList = await fetchCalenderAPI(); // TODO 这类连接外部API或者资源站点的，最好之后整合为同一个service
       //fetchCalenderAPI() 返回当季所有新番的list，并储存在cache中
+      // TODO 这类连接外部API或者资源站点的，最好之后整合为同一个service
       this.logService.log(
         `未发现任何新番列表信息缓存，访问源以获取最新的新番列表`,
         ctx,

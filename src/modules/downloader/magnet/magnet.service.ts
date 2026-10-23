@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { QbittorrentService } from '../../../libs/utils/qbittorrent/qbittorrent.service';
 import { TorrentTransformerService } from '../../../libs/utils/magnet/torrent-transformer/torrent-transformer.service';
-import { MagnetFileDetails } from '../../../libs/modal/magnet/file';
 import { MagnetParseResponseDto } from './dto/magnet.response.dto';
 import { HttpStatusCode } from 'axios';
 import { ResponseBase } from '../../../libs/dto/response-base.dto';
@@ -15,6 +14,8 @@ import {
   DBTorrentIsExistedException,
 } from '../../../libs/exceptions/magnet/DBExceptions.tx';
 import { ParseResult } from '../../../libs/modal/query/parse';
+import { ParserService } from '../../../libs/core/parser/parser.service';
+import { JellyfinNamer } from '../../../libs/core/structure/jellyfin-naming';
 
 @Injectable()
 export class MagnetService {
@@ -27,6 +28,8 @@ export class MagnetService {
     private readonly torrentTransformService: TorrentTransformerService,
     private readonly logService: LogService,
     private readonly prisma: PrismaService,
+    private readonly titleParser: ParserService,
+    private readonly jellyfinNamer: JellyfinNamer,
   ) {}
 
   async parseMagnet(magnet: string) {
@@ -41,13 +44,41 @@ export class MagnetService {
       ctx,
     );
 
+    // 标题 + 文件结构双输入解析（新 FilenameParser）
+    const parsedTitle = this.titleParser.parse(
+      results.torrentName,
+      results.filesList,
+    );
+    this.logService.logWithData(
+      `标题解析结果（含文件结构信号）：`,
+      parsedTitle,
+      ctx,
+    );
+
+    // Jellyfin 命名层：为每个视频文件给出建议落盘路径
+    const jellyfinTargets = results.filesList
+      .filter((file) =>
+        /\.(mp4|mkv|mov|avi|wmv|flv|m2ts|mts|webm|m4v|ts)$/i.test(file.name),
+      )
+      .map((file) => ({
+        file: file.name,
+        ...this.jellyfinNamer.buildPath(parsedTitle, file),
+      }))
+      .filter((target) => target.relativePath.length > 0);
+
     await this.createNewTorrenttoDB(results, magnet);
 
-    const response = new MagnetParseResponseDto(HttpStatusCode.Ok, true, {
-      filesList: results.filesList,
-      torrentName: results.torrentName,
-      infoHash: results.infoHash,
-    } as MagnetFileDetails);
+    const response = new MagnetParseResponseDto(
+      HttpStatusCode.Ok,
+      true,
+      {
+        filesList: results.filesList,
+        torrentName: results.torrentName,
+        infoHash: results.infoHash,
+      },
+      parsedTitle,
+      jellyfinTargets,
+    );
     return response;
   }
 

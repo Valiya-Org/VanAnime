@@ -9,6 +9,7 @@ import { LogService } from '../../../core/log/log.service';
 import { WebTorrentParseException } from '../../../exceptions/magnet/WebTorrentParseException';
 import { TORRENT_FILE_PATH } from '../../../constants/path/core';
 import { Ctx } from 'src/libs/modal/ctx/Ctx';
+import type WebTorrent from 'webtorrent';
 
 @Injectable()
 export class TorrentTransformerService {
@@ -26,7 +27,7 @@ export class TorrentTransformerService {
 
   constructor(
     @Inject('package:webtorrent')
-    private readonly Webtorrent: typeof import('webtorrent'),
+    private readonly Webtorrent: typeof WebTorrent,
     private readonly configService: ConfigService,
     private readonly logService: LogService,
   ) {}
