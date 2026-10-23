@@ -37,10 +37,12 @@
 
 ### 仓库里的约束
 - `package.json` → `engines.node`：`>=22.23.4 <24 || >=24.22.1 <26 || >=26.12.1`
-- `.nvmrc`（新增）：`22.23.4`（CI 基线）
-- `.github/workflows/lint.yaml`：`node-version: '22.23.4'`
+- `.nvmrc`：`24.22.1`（开发 / CI 基线）
+- `.github/workflows/lint.yaml`：`node-version: '24.22.1'`
 
 > 开发机若低于上述版本，`npm install` 会报 `EBADENGINE`，且仍处于证书中间人风险中，请先升级 Node。
+>
+> **注意**：`engines` 允许 Node 22.23.4+ 运行应用，但 **Jest 30 的 `require(esm)` 需要 Node >= 24.9**（见 §4.3）；在 Node 22.x 上跑单测会报 `ERR_REQUIRE_ESM`。因此开发 / CI 统一使用 `24.22.1`。
 
 ---
 
@@ -147,9 +149,11 @@ Prisma 7 移除 Rust 查询引擎，改为 **Driver Adapter + WASM 查询编译�
 
 > 生成器保留 legacy 的 `prisma-client-js`（Prisma 7 仍支持），因此 `import { PrismaClient } from '@prisma/client'` 不变。
 
-### 4.3 NestJS 12 是 ESM-only → Jest 需要 vm modules
+### 4.3 NestJS 12 是 ESM-only → Jest 需要 Node >= 24.9
 
-NestJS 12 的包 `"type": "module"`，Jest 的 CommonJS 运行时无法直接 `require`。必须让 Node 以 `--experimental-vm-modules` 启动，才能启用 `require(esm)`。
+NestJS 12 的包 `"type": "module"`，Jest 的 CommonJS 运行时无法直接 `require`。
+
+**关键约束**：Jest 30 只在 **Node >= 24.9** 时原生支持 `require(esm)`；Node 22.x 即使加了 `--experimental-vm-modules`，仍会报 `ERR_REQUIRE_ESM: Must use import to load ES Module`。因此开发 / CI 基线用 `24.22.1`（`.nvmrc` 与 workflow 已对齐）。
 
 改动：
 - 新增 `cross-env` 依赖（跨平台设置环境变量）
