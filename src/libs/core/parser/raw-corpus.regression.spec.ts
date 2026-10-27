@@ -19,11 +19,13 @@ function passes(category: RawCorpusCategory, episode: EpisodeRef): boolean {
     case 'single':
       return episode?.kind === 'single';
     case 'season':
+      // 整季/连续范围；「全集/全话/Fin」无数字时可为 null
       return episode === null || episode.kind === 'range';
     case 'collection':
       return episode === null;
     case 'movie':
-      return episode === null || episode.kind === 'range';
+      // 剧场版/电影无集数（多部剧场版合集也按 null 处理，不再输出范围）
+      return episode === null;
     case 'noEpisode':
       return episode === null;
     default:

@@ -52,10 +52,15 @@ export class ParserService {
   }
 
   private applyFileSignals(parsed: ParsedTitle, signals: FileSignals): void {
-    // 1. 混合内容（视频+音频/图片/压缩包/文档）→ 合集，不输出集数
+    // 1. 混合内容（视频+音频/图片/压缩包/文档）：
+    //    标题已给出集数时保留（Scans/CDs 是附件，不是「合集」），仅降置信；
+    //    标题无集数时才视为合集、不输出集数。
     if (signals.isMixed) {
-      parsed.episode = null;
-      parsed.confidence = Math.min(parsed.confidence, 0.5);
+      if (parsed.episode === null) {
+        parsed.confidence = Math.min(parsed.confidence, 0.5);
+        return;
+      }
+      parsed.confidence = Math.min(parsed.confidence, 0.6);
       return;
     }
 
@@ -77,11 +82,20 @@ export class ParserService {
       } else {
         parsed.confidence = Math.max(0, parsed.confidence - 0.2);
       }
+      // 文件集数有缺集（如 1、2、5）时，min..max 是近似范围，再降置信
+      if (fileEp.kind === 'range' && !this.isContiguous(signals.episodes)) {
+        parsed.confidence = Math.max(0, parsed.confidence - 0.1);
+      }
       return;
     }
 
-    // 4. 无文件级集数但视频数 > 1 → 推断整季范围（低置信）
-    if (parsed.episode === null && signals.videoCount > 1) {
+    // 4. 无文件级集数但视频数 > 1 → 推断整季范围（低置信）。
+    //    电影（含特典/NCED/Menu 等多个视频文件）不适用集数，跳过。
+    if (
+      parsed.episode === null &&
+      parsed.episodeType !== 'Movie' &&
+      signals.videoCount > 1
+    ) {
       parsed.episode = { kind: 'range', from: 1, to: signals.videoCount };
       parsed.confidence = Math.min(parsed.confidence, 0.6);
     }
@@ -95,6 +109,14 @@ export class ParserService {
     if (signals.episodes.length === 1) return { kind: 'single', no: min };
     if (max > min) return { kind: 'range', from: min, to: max };
     return { kind: 'single', no: min };
+  }
+
+  /** 文件集数是否连续（用于判断 min..max 范围是否精确） */
+  private isContiguous(episodes: number[]): boolean {
+    for (let i = 1; i < episodes.length; i++) {
+      if (episodes[i] - episodes[i - 1] !== 1) return false;
+    }
+    return true;
   }
 
   /** 结构化比较两个 EpisodeRef 是否一致（用于置信度加减） */

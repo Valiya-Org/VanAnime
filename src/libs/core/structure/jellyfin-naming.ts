@@ -30,8 +30,14 @@ export class JellyfinNamer {
     const year = parsed.year ? ` (${parsed.year})` : '';
     const ext = this.extensionOf(file.name);
 
-    // 电影：`XX (2026)/XX (2026).mkv`
+    // 电影：主文件 → `XX (2026)/XX (2026).mkv`；特典/菜单等 → `XX (2026)/extras/...`
     if (parsed.episodeType === 'Movie') {
+      if (this.isExtra(file.name)) {
+        return {
+          relativePath: `${show}${year}/extras/${this.sanitize(file.name)}`,
+          episode: null,
+        };
+      }
       return {
         relativePath: `${show}${year}/${show}${year}${ext}`,
         episode: null,
@@ -42,6 +48,9 @@ export class JellyfinNamer {
     const episode = this.episodeForFile(parsed, file);
     if (episode == null) return { relativePath: '', episode: null };
 
+    // 已知限制：字幕组常按「全剧连续编号」给绝对集数（如第3季里标 S3 - 48），
+    // 而 Jellyfin 期望季内编号（S03E01 起）。此处不做换算（缺少各季集数信息），
+    // 仅按解析出的 season + episode 直接拼接，上层可据此降置信或人工校正。
     const season = parsed.season ?? 1;
     const s = String(season).padStart(2, '0');
     const e = String(episode).padStart(2, '0');
@@ -76,6 +85,13 @@ export class JellyfinNamer {
   private extensionOf(name: string): string {
     const m = name.match(/(\.[a-z0-9]+)$/i);
     return m ? m[1].toLowerCase() : '';
+  }
+
+  /** 电影类 torrent 里的特典/菜单等非正片视频，应进 extras/ 而非与正片同名。 */
+  private isExtra(name: string): boolean {
+    return /(?:NCOP|NCED|CM|PV|Menu|Preview|Trailer|特典|メニュー|Making|Interview)/i.test(
+      name,
+    );
   }
 
   /** 去除文件名非法字符（Windows 侧最严格） */

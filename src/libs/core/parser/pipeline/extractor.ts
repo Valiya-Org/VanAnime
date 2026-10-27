@@ -16,7 +16,18 @@ import {
 import { groupDictionary } from '../../../modal/parser/Dictionary/GroupDictionary';
 import { cnToNumber } from './cn-numeral';
 
-const ROMAN: Record<string, number> = { Ⅱ: 2, Ⅲ: 3, Ⅳ: 4, Ⅴ: 5, Ⅵ: 6 };
+const ROMAN: Record<string, number> = {
+  Ⅱ: 2,
+  Ⅲ: 3,
+  Ⅳ: 4,
+  Ⅴ: 5,
+  Ⅵ: 6,
+  II: 2,
+  III: 3,
+  IV: 4,
+  V: 5,
+  VI: 6,
+};
 
 /** 组名特征词：命中即认为是发布组 */
 const GROUP_KEYWORD =
@@ -132,15 +143,61 @@ export class ParsedTitleExtractor {
     result.title = this.splitTitle(parts);
   }
 
-  /** 多语言标题按 `/` 切分：第一段作中文名，其余放 others */
+  /**
+   * 多语言标题按 `/` 切分后，按文字类型分配 zh / jp / romaji，并剥掉季数标记。
+   * - 假名（平假名/片假名）→ jp
+   * - 汉字（无假名）→ zh
+   * - 拉丁字母 → romaji
+   * - 其它 → others
+   */
   private splitTitle(parts: string[]): ParsedTitle['title'] {
     const joined = parts.join(' ').trim();
     if (!joined) return { others: [] };
     const segs = joined
       .split(/\s*\/\s*/)
+      .map((s) => this.stripSeason(s))
       .map((s) => s.trim())
       .filter(Boolean);
-    return { zh: segs[0], others: segs.slice(1) };
+
+    const title: ParsedTitle['title'] = { others: [] };
+    for (const seg of segs) {
+      const kind = this.scriptOf(seg);
+      if (kind === 'zh' && title.zh == null) title.zh = seg;
+      else if (kind === 'jp' && title.jp == null) title.jp = seg;
+      else if (kind === 'romaji' && title.romaji == null) title.romaji = seg;
+      else title.others.push(seg);
+    }
+    // 兜底：没识别出任何语言时，把第一段塞进 zh，避免标题完全丢失
+    if (
+      title.zh == null &&
+      title.jp == null &&
+      title.romaji == null &&
+      title.others.length > 0
+    ) {
+      title.zh = title.others.shift()!;
+    }
+    return title;
+  }
+
+  /** 按文字类型判断语言。 */
+  private scriptOf(s: string): 'zh' | 'jp' | 'romaji' | 'other' {
+    if (/[\u3040-\u30ff]/.test(s)) return 'jp';
+    if (/[\u4e00-\u9fff]/.test(s)) return 'zh';
+    if (/[A-Za-z]/.test(s)) return 'romaji';
+    return 'other';
+  }
+
+  /** 从标题片段剥掉季数标记（第二季 / 第3季 / S2 / Season 2 / 2nd Season / Ⅱ…）。 */
+  private stripSeason(s: string): string {
+    return s
+      .replace(/\d{1,2}(?:nd|rd|th|st)\s*Season\b/gi, '')
+      .replace(/\bSeason\s*\d{1,2}\b/gi, '')
+      .replace(/\bS\d{1,2}\b/gi, '')
+      .replace(/第\s*\d{1,2}\s*(?:季|期)/g, '')
+      .replace(/第\s*[零〇一二三四五六七八九十百千万亿两兩廿卅]+\s*季/g, '')
+      .replace(/[ⅡⅢⅣⅤⅥ]/g, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
   }
 
   private looksLikeGroup(content: string): boolean {
@@ -316,10 +373,15 @@ export class ParsedTitleExtractor {
     return n >= 1900 && n <= 2100;
   }
 
-  /** 从标题文本提取季度：S2 / 第2季 / 2nd Season / Ⅱ 等 */
+  /** 从标题文本提取季度：S02E03 / S2 / 第2季 / 2nd Season / Ⅱ / II / 「Show 2 - 03」等 */
   private detectSeason(raw: string): number | null {
-    let m = raw.match(/(?:S|Season\s*)(\d{1,2})\b/i);
+    // SxxEyy 形态（S02E03 → 2），先于裸 S2 判断（裸 S2 的 \b 在 E 前会失败）
+    let m = raw.match(/\bS(\d{1,2})\s*E\d/i);
     if (m) return +m[1];
+    // S2 / Season 2
+    m = raw.match(/(?:S|Season\s*)(\d{1,2})\b/i);
+    if (m) return +m[1];
+    // 第2季 / 第2期 / 第二季
     m = raw.match(/第\s*(\d{1,2})\s*(?:季|期)/);
     if (m) return +m[1];
     m = raw.match(/第\s*([零〇一二三四五六七八九十百千万亿两兩廿卅]+)\s*季/);
@@ -327,10 +389,18 @@ export class ParsedTitleExtractor {
       const season = cnToNumber(m[1]);
       if (season != null) return season;
     }
+    // 2nd Season / 3rd Season
     m = raw.match(/(\d{1,2})(?:nd|rd|th|st)\s*Season/i);
     if (m) return +m[1];
+    // Unicode 罗马数字 Ⅱ Ⅲ Ⅳ …
     m = raw.match(/[ⅡⅢⅣⅤⅥ]/);
     if (m) return ROMAN[m[0]] ?? null;
+    // ASCII 罗马数字 II III IV V VI（词边界，避免误配普通单词）
+    m = raw.match(/\b(II|III|IV|V|VI)\b/);
+    if (m) return ROMAN[m[1]] ?? null;
+    // 「Show 2 - 03」：紧邻 ` - 集数` 前的小数字（1-12）视为季度
+    m = raw.match(/(?:^|\s)(\d{1,2})\s*-\s*\d{1,4}\b/);
+    if (m && +m[1] >= 1 && +m[1] <= 12) return +m[1];
     return null;
   }
 
@@ -342,10 +412,11 @@ export class ParsedTitleExtractor {
 
   /** 内容类型判定：Movie/OVA/OAD/SP/EX，默认 TV */
   private detectType(raw: string): EpisodeType {
-    if (/剧场版|劇場版|\bMovie\b|电影版/i.test(raw)) return 'Movie';
+    if (/剧场版|劇場版|映画|映畫|电影|\bMovie\b/i.test(raw)) return 'Movie';
     if (/\bOVA\b/i.test(raw)) return 'OVA';
     if (/\bOAD\b/i.test(raw)) return 'OAD';
-    if (/\bSP\b|特别篇|特別篇|番外|スピンオフ/i.test(raw)) return 'SP';
+    if (/\bSP\b|SP\s*[x×]?\s*\d|特别篇|特別篇|番外|スピンオフ/i.test(raw))
+      return 'SP';
     if (/\bEX\b/i.test(raw)) return 'EX';
     return 'TV';
   }

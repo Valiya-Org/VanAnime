@@ -16,6 +16,11 @@ import {
 import { ParseResult } from '../../../libs/modal/query/parse';
 import { ParserService } from '../../../libs/core/parser/parser.service';
 import { JellyfinNamer } from '../../../libs/core/structure/jellyfin-naming';
+import {
+  ParsedTitle,
+  createEmptyParsedTitle,
+} from '../../../libs/modal/parser/parsed-title';
+import { JellyfinTargetEntry } from './dto/magnet.response.dto';
 
 @Injectable()
 export class MagnetService {
@@ -44,27 +49,43 @@ export class MagnetService {
       ctx,
     );
 
-    // 标题 + 文件结构双输入解析（新 FilenameParser）
-    const parsedTitle = this.titleParser.parse(
-      results.torrentName,
-      results.filesList,
-    );
-    this.logService.logWithData(
-      `标题解析结果（含文件结构信号）：`,
-      parsedTitle,
-      ctx,
-    );
+    // 标题 + 文件结构双输入解析（新 FilenameParser）+ Jellyfin 命名。
+    // 解析失败不影响入库，降级为空解析结果（与 query.service 的容错策略一致）。
+    let parsedTitle: ParsedTitle = createEmptyParsedTitle(results.torrentName);
+    let jellyfinTargets: JellyfinTargetEntry[] = [];
+    try {
+      parsedTitle = this.titleParser.parse(
+        results.torrentName,
+        results.filesList,
+      );
+      this.logService.logWithData(
+        `标题解析结果（含文件结构信号）：`,
+        parsedTitle,
+        ctx,
+      );
 
-    // Jellyfin 命名层：为每个视频文件给出建议落盘路径
-    const jellyfinTargets = results.filesList
-      .filter((file) =>
-        /\.(mp4|mkv|mov|avi|wmv|flv|m2ts|mts|webm|m4v|ts)$/i.test(file.name),
-      )
-      .map((file) => ({
-        file: file.name,
-        ...this.jellyfinNamer.buildPath(parsedTitle, file),
-      }))
-      .filter((target) => target.relativePath.length > 0);
+      // Jellyfin 命名层：为每个视频文件给出建议落盘路径，并按路径去重
+      const seen = new Set<string>();
+      jellyfinTargets = results.filesList
+        .filter((file) =>
+          /\.(mp4|mkv|mov|avi|wmv|flv|m2ts|mts|webm|m4v|ts)$/i.test(file.name),
+        )
+        .map((file) => ({
+          file: file.name,
+          ...this.jellyfinNamer.buildPath(parsedTitle, file),
+        }))
+        .filter((target) => target.relativePath.length > 0)
+        .filter((target) => {
+          if (seen.has(target.relativePath)) return false;
+          seen.add(target.relativePath);
+          return true;
+        });
+    } catch (error) {
+      this.logService.warn(
+        `标题解析/命名失败，降级为空结果：${(error as Error).message}`,
+        ctx,
+      );
+    }
 
     await this.createNewTorrenttoDB(results, magnet);
 
