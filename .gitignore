@@ -3,6 +3,14 @@
 /node_modules
 /build
 
+# Prisma config transpile artifacts
+/prisma.config.js
+/prisma.config.js.map
+/prisma.config.d.ts
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
 # Logs
 logs
 *.log
@@ -46,6 +54,9 @@ lerna-debug.log*
 .temp
 .tmp
 
+# raw corpus dumps（人工分类样本；已生成 fixtures/raw-corpus.ts 供测试，不再跟踪原始文件）
+.corpus-raw/
+
 # Runtime data
 pids
 *.pid
@@ -56,4 +67,3 @@ pids
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 /src/files/
 /test/
-/prisma/migrations/
