@@ -25,34 +25,25 @@ const colorizer = format.colorize();
 
 @Injectable()
 export class LogService implements LoggerService {
-  private generalFormat = format.printf(
-    ({
-      level,
-      message,
-      timestamp,
-      serviceContext,
-      functionContext,
-    }: {
-      level: string;
-      message: string;
-      timestamp: string;
-      serviceContext?: string;
-      functionContext?: string;
-    }) => {
-      const coloredLevel = colorizer.colorize(
-        level,
-        `[${level.toUpperCase()}]`,
-      );
-      const coloredServiceName = serviceContext
-        ? colorizer.colorize('warn', `[${serviceContext}] `)
-        : '';
-      const coloredFunctionName = functionContext
-        ? colorizer.colorize('debug', `<${functionContext}> `)
-        : '';
-      const msg = colorizer.colorize(level, message);
-      return `${coloredLevel} ${timestamp} ${coloredServiceName}${coloredFunctionName}${msg}`;
-    },
-  );
+  private generalFormat = format.printf((info) => {
+    const { level, message, timestamp, serviceContext, functionContext } =
+      info as {
+        level: string;
+        message: string;
+        timestamp?: string;
+        serviceContext?: string;
+        functionContext?: string;
+      };
+    const coloredLevel = colorizer.colorize(level, `[${level.toUpperCase()}]`);
+    const coloredServiceName = serviceContext
+      ? colorizer.colorize('warn', `[${serviceContext}] `)
+      : '';
+    const coloredFunctionName = functionContext
+      ? colorizer.colorize('debug', `<${functionContext}> `)
+      : '';
+    const msg = colorizer.colorize(level, message);
+    return `${coloredLevel} ${timestamp} ${coloredServiceName}${coloredFunctionName}${msg}`;
+  });
 
   private logger = createLogger({
     levels: customLevels.levels,
@@ -64,7 +55,7 @@ export class LogService implements LoggerService {
     transports: [new transports.Console()],
   });
 
-  log(message: any, ctx?: Ctx) {
+  log(message: string, ctx?: Ctx) {
     this.logger.info(message, ctx);
   }
 

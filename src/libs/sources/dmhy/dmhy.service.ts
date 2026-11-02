@@ -49,7 +49,9 @@ export class DmhyService implements SourceServiceInterface<DMHYSearchContent> {
         this.logService.error(error.message, ctx, error.stack);
         throw new DmhyAPIException();
       } else {
-        throw new Error('Unexpect Anime Garden API error occurred.');
+        throw new Error('Unexpect Anime Garden API error occurred.', {
+          cause: error,
+        });
       }
     }
   }

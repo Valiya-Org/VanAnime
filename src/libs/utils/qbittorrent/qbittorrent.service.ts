@@ -14,8 +14,9 @@ import * as fs from 'fs';
 import FormData from 'form-data';
 import * as process from 'node:process';
 import { QBresumeTaskException } from '../../exceptions/qb/QBresumeTaskException';
-import { QB_V5_ENDPOINTS, QB_V5_STATES } from '../../constants/qbittorrent/v5';
-import { QB_V4_ENDPOINTS, QB_V4_STATES } from '../../constants/qbittorrent/v4';
+import { QBNotConfiguredException } from '../../exceptions/qb/QBNotConfiguredException';
+import { QB_V5_ENDPOINTS } from '../../constants/qbittorrent/v5';
+import { QB_V4_ENDPOINTS } from '../../constants/qbittorrent/v4';
 import { TORRENT_FILE_PATH } from '../../constants/path/core';
 import { ApiClientService } from 'src/libs/core/apiClient/apiClient.service';
 import { Ctx } from 'src/libs/modal/ctx/Ctx';
@@ -27,7 +28,6 @@ export class QbittorrentService implements OnModuleInit {
   private password: string | undefined = undefined;
   private qbVersion: string | undefined = undefined;
   private QB_ENDPOINTS: typeof QB_V5_ENDPOINTS | typeof QB_V4_ENDPOINTS;
-  private QB_STATES: typeof QB_V5_STATES | typeof QB_V4_STATES;
   private readonly ctx: Ctx = {
     serviceContext: 'QbittorrentService',
   };
@@ -42,11 +42,13 @@ export class QbittorrentService implements OnModuleInit {
     this.username = this.configService.get<string>('QB_USERNAME');
     this.password = this.configService.get<string>('QB_PASSWORD');
     this.qbVersion = this.configService.get<string>('QB_VERSION') || 'v5';
+    this.initQBConstants();
   }
 
   async onModuleInit() {
+    // qBittorrent 下载器尚未接入，登录流程暂不启用；
+    // QB_ENDPOINTS 已在构造函数中初始化，避免未定义。
     // await this.QBlogin();
-    // this.initQBConstants();
   }
 
   async QBlogin() {
@@ -115,6 +117,15 @@ export class QbittorrentService implements OnModuleInit {
 
   async submitNewTask(fileDetails: MagnetFileDetails) {
     const ctx: Ctx = { ...this.ctx, functionContext: 'submitNewTask' };
+    if (!this.qbHost || !this.username || !this.password) {
+      this.logService.error(
+        'qBittorrent 未配置，无法提交下载任务（缺少 QB_HOST / QB_USERNAME / QB_PASSWORD）',
+        ctx,
+      );
+      throw new QBNotConfiguredException(
+        'qBittorrent 未配置：请设置 QB_HOST / QB_USERNAME / QB_PASSWORD 环境变量',
+      );
+    }
     const { filesList, torrentName, infoHash } = fileDetails;
     this.logService.logWithData(
       '开始添加新Torrent，infoHash为：',
@@ -337,10 +348,8 @@ export class QbittorrentService implements OnModuleInit {
   private initQBConstants() {
     if (this.qbVersion === 'v5') {
       this.QB_ENDPOINTS = QB_V5_ENDPOINTS;
-      this.QB_STATES = QB_V5_STATES;
     } else {
       this.QB_ENDPOINTS = QB_V4_ENDPOINTS;
-      this.QB_STATES = QB_V4_STATES;
     }
   }
 }
