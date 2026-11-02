@@ -155,6 +155,7 @@ export class ParsedTitleExtractor {
     if (!joined) return { others: [] };
     const segs = joined
       .split(/\s*\/\s*/)
+      .map((s) => this.stripBanner(s))
       .map((s) => this.stripSeason(s))
       .map((s) => s.trim())
       .filter(Boolean);
@@ -187,7 +188,10 @@ export class ParsedTitleExtractor {
     return 'other';
   }
 
-  /** 从标题片段剥掉季数标记（第二季 / 第3季 / S2 / Season 2 / 2nd Season / Ⅱ…）。 */
+  /**
+   * 从标题片段剥掉季数标记（第二季 / 第3季 / S2 / Season 2 / 2nd Season / Ⅱ / II /
+   * 尾部季数「Show 2」等）。与 detectSeason 识别出的形式保持同步。
+   */
   private stripSeason(s: string): string {
     return s
       .replace(/\d{1,2}(?:nd|rd|th|st)\s*Season\b/gi, '')
@@ -196,8 +200,16 @@ export class ParsedTitleExtractor {
       .replace(/第\s*\d{1,2}\s*(?:季|期)/g, '')
       .replace(/第\s*[零〇一二三四五六七八九十百千万亿两兩廿卅]+\s*季/g, '')
       .replace(/[ⅡⅢⅣⅤⅥ]/g, '')
+      .replace(/\b(II|III|IV|V|VI)\b/g, '')
+      .replace(/\s+(?:[1-9]|1[0-2])$/g, '')
+      .replace(/(?:剧场版|劇場版)\s*$/g, '')
       .replace(/\s{2,}/g, ' ')
       .trim();
+  }
+
+  /** 剥离横幅片段（★10月新番★ / 10月新番）：只剥前缀，不整块判 junk。 */
+  private stripBanner(s: string): string {
+    return s.replace(/^★?\d{1,2}月新番★?\s*/g, '').trim();
   }
 
   private looksLikeGroup(content: string): boolean {
@@ -398,9 +410,9 @@ export class ParsedTitleExtractor {
     // ASCII 罗马数字 II III IV V VI（词边界，避免误配普通单词）
     m = raw.match(/\b(II|III|IV|V|VI)\b/);
     if (m) return ROMAN[m[1]] ?? null;
-    // 「Show 2 - 03」：紧邻 ` - 集数` 前的小数字（1-12）视为季度
-    m = raw.match(/(?:^|\s)(\d{1,2})\s*-\s*\d{1,4}\b/);
-    if (m && +m[1] >= 1 && +m[1] <= 12) return +m[1];
+    // 「Show 2 - 03」：` - ` 两边必须有空格、排除前导零（01/05）、后跟数字时跳过（NN-NN 是范围）
+    m = raw.match(/(?:^|\s)([1-9]\d?)\s+-\s+\d{1,4}(?!\d)/);
+    if (m && +m[1] <= 12) return +m[1];
     return null;
   }
 

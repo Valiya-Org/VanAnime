@@ -89,4 +89,40 @@ describe('review regression (title + files → ParsedTitle + Jellyfin path)', ()
     expect(sl.episode).toEqual({ kind: 'single', no: 48 });
     expect(sl.title.zh).toBe('关于我转生变成史莱姆这档事');
   });
+
+  it('A: 横幅与标题同块时只剥横幅、不丢标题', () => {
+    const p = service.parse(
+      '[喵萌奶茶屋] ★10月新番★ 药屋少女的呢喃 - 03 [1080p]',
+    );
+    expect(p.title.zh).toBe('药屋少女的呢喃');
+
+    const q = service.parse('[Group] 新番茄炒蛋 - 03 [1080p]');
+    expect(q.title.zh).toBe('新番茄炒蛋');
+  });
+
+  it('B: 发布组名里的 CM/PV 子串不会被误判成特典', () => {
+    const mv = service.parse('你的名字 剧场版', [
+      f('Kimi no Na wa [CMCT][BDRip 1080p].mkv'),
+    ]);
+    const path = namer.buildPath(
+      mv,
+      f('Kimi no Na wa [CMCT][BDRip 1080p].mkv'),
+    ).relativePath;
+    expect(path).not.toContain('extras');
+  });
+
+  it('D: 集数范围不会被当成季数', () => {
+    expect(service.parse('[Group] Show 01-12 [1080p]').season).toBeNull();
+    expect(service.parse('[Group] Show 05-08 [1080p]').season).toBeNull();
+  });
+
+  it('E: ASCII 罗马数字与尾部季数也会从标题剥离', () => {
+    const re = service.parse('Re Zero 2 - 03 [1080p]');
+    expect(re.season).toBe(2);
+    expect(re.title.romaji).toBe('Re Zero');
+
+    const dm = service.parse('Danmachi IV - 03 [1080p]');
+    expect(dm.season).toBe(4);
+    expect(dm.title.romaji).toBe('Danmachi');
+  });
 });

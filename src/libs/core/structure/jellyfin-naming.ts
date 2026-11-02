@@ -87,9 +87,13 @@ export class JellyfinNamer {
     return m ? m[1].toLowerCase() : '';
   }
 
-  /** 电影类 torrent 里的特典/菜单等非正片视频，应进 extras/ 而非与正片同名。 */
+  /**
+   * 电影类 torrent 里的特典/菜单等非正片视频，应进 extras/ 而非与正片同名。
+   * 注意：必须带边界（前有 [ 空格 ( _ 或行首，后有 ] 空格 ) _ . 或行尾），
+   * 避免把发布组名里的子串（如 [CMCT] 的 CM）误判成特典。
+   */
   private isExtra(name: string): boolean {
-    return /(?:NCOP|NCED|CM|PV|Menu|Preview|Trailer|特典|メニュー|Making|Interview)/i.test(
+    return /(?:^|[[\s_(])(?:NC(?:OP|ED)\d*|CM\d*|PV\d*|Menu\d*|Preview|Trailer|特典|メニュー|Making|Interview)(?=$|[\]\s_).])/i.test(
       name,
     );
   }

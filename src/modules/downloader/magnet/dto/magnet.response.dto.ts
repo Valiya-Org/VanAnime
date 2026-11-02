@@ -13,11 +13,13 @@ export class MagnetParseResponseDto extends ResponseBase {
     fileDetails: MagnetFileDetails,
     parsedTitle: ParsedTitle,
     jellyfinTargets: JellyfinTargetEntry[],
+    conflicts: string[],
   ) {
     super(statusCode, success);
     this.fileDetails = fileDetails;
     this.parsedTitle = parsedTitle;
     this.jellyfinTargets = jellyfinTargets;
+    this.conflicts = conflicts;
   }
 
   @ApiProperty({
@@ -30,4 +32,9 @@ export class MagnetParseResponseDto extends ResponseBase {
 
   @ApiProperty({ description: 'Jellyfin 建议落盘路径（每个视频文件一条）' })
   readonly jellyfinTargets: JellyfinTargetEntry[];
+
+  @ApiProperty({
+    description: '落盘路径冲突的文件列表（被丢弃，供上层/人工确认）',
+  })
+  readonly conflicts: string[];
 }

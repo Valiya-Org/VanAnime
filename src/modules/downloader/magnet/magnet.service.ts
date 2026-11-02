@@ -14,7 +14,7 @@ import {
   DBTorrentIsExistedException,
 } from '../../../libs/exceptions/magnet/DBExceptions.tx';
 import { ParseResult } from '../../../libs/modal/query/parse';
-import { ParserService } from '../../../libs/core/parser/parser.service';
+import { ParserFacade } from '../../../libs/core/parser/parser.facade';
 import { JellyfinNamer } from '../../../libs/core/structure/jellyfin-naming';
 import {
   ParsedTitle,
@@ -33,7 +33,7 @@ export class MagnetService {
     private readonly torrentTransformService: TorrentTransformerService,
     private readonly logService: LogService,
     private readonly prisma: PrismaService,
-    private readonly titleParser: ParserService,
+    private readonly titleParser: ParserFacade,
     private readonly jellyfinNamer: JellyfinNamer,
   ) {}
 
@@ -53,8 +53,9 @@ export class MagnetService {
     // 解析失败不影响入库，降级为空解析结果（与 query.service 的容错策略一致）。
     let parsedTitle: ParsedTitle = createEmptyParsedTitle(results.torrentName);
     let jellyfinTargets: JellyfinTargetEntry[] = [];
+    const conflicts: string[] = [];
     try {
-      parsedTitle = this.titleParser.parse(
+      parsedTitle = await this.titleParser.parse(
         results.torrentName,
         results.filesList,
       );
@@ -64,9 +65,8 @@ export class MagnetService {
         ctx,
       );
 
-      // Jellyfin 命名层：为每个视频文件给出建议落盘路径，并按路径去重
-      const seen = new Set<string>();
-      jellyfinTargets = results.filesList
+      // Jellyfin 命名层：为每个视频文件给出建议落盘路径
+      const targets = results.filesList
         .filter((file) =>
           /\.(mp4|mkv|mov|avi|wmv|flv|m2ts|mts|webm|m4v|ts)$/i.test(file.name),
         )
@@ -74,12 +74,24 @@ export class MagnetService {
           file: file.name,
           ...this.jellyfinNamer.buildPath(parsedTitle, file),
         }))
-        .filter((target) => target.relativePath.length > 0)
-        .filter((target) => {
-          if (seen.has(target.relativePath)) return false;
+        .filter((target) => target.relativePath.length > 0);
+
+      // 去重：路径冲突时 warn 并记入 conflicts（不静默丢，交给上层/人工确认）。
+      // TODO: 同一集多版本优先保留版本号更高的（release.version）；
+      //       多正片电影加 -part1/-part2 后缀；电影所有视频被误判为 extra 时把体积最大的当正片。
+      const seen = new Set<string>();
+      jellyfinTargets = targets.filter((target) => {
+        if (!seen.has(target.relativePath)) {
           seen.add(target.relativePath);
           return true;
-        });
+        }
+        conflicts.push(`${target.file}（重复路径：${target.relativePath}）`);
+        this.logService.warn(
+          `Jellyfin 落盘路径冲突，已丢弃：${target.file} -> ${target.relativePath}`,
+          ctx,
+        );
+        return false;
+      });
     } catch (error) {
       this.logService.warn(
         `标题解析/命名失败，降级为空结果：${(error as Error).message}`,
@@ -99,6 +111,7 @@ export class MagnetService {
       },
       parsedTitle,
       jellyfinTargets,
+      conflicts,
     );
     return response;
   }
