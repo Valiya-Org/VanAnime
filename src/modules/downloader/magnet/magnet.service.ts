@@ -14,7 +14,7 @@ import {
   DBTorrentIsExistedException,
 } from '../../../libs/exceptions/magnet/DBExceptions.tx';
 import { ParseResult } from '../../../libs/modal/query/parse';
-import { ParserFacade } from '../../../libs/core/parser/parser.facade';
+import { ParserService } from '../../../libs/core/parser/parser.service';
 import { JellyfinNamer } from '../../../libs/core/structure/jellyfin-naming';
 import {
   ParsedTitle,
@@ -33,7 +33,7 @@ export class MagnetService {
     private readonly torrentTransformService: TorrentTransformerService,
     private readonly logService: LogService,
     private readonly prisma: PrismaService,
-    private readonly titleParser: ParserFacade,
+    private readonly titleParser: ParserService,
     private readonly jellyfinNamer: JellyfinNamer,
   ) {}
 
@@ -55,7 +55,7 @@ export class MagnetService {
     let jellyfinTargets: JellyfinTargetEntry[] = [];
     const conflicts: string[] = [];
     try {
-      parsedTitle = await this.titleParser.parse(
+      parsedTitle = this.titleParser.parse(
         results.torrentName,
         results.filesList,
       );
