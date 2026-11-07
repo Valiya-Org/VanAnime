@@ -200,8 +200,8 @@ export class ParsedTitleExtractor {
       .replace(/第\s*\d{1,2}\s*(?:季|期)/g, '')
       .replace(/第\s*[零〇一二三四五六七八九十百千万亿两兩廿卅]+\s*季/g, '')
       .replace(/[ⅡⅢⅣⅤⅥ]/g, '')
-      .replace(/\b(II|III|IV|V|VI)\b/g, '')
-      .replace(/\s+(?:[1-9]|1[0-2])$/g, '')
+      .replace(/\b(II|III|IV|V|VI)\b(?!\s*Part\b)/g, '')
+      .replace(/(?<!\b(?:No\.|Part|Vol\.?|Ep))\s+(?:[1-9]|1[0-2])$/g, '')
       .replace(/(?:剧场版|劇場版)\s*$/g, '')
       .replace(/\s{2,}/g, ' ')
       .trim();
@@ -407,11 +407,14 @@ export class ParsedTitleExtractor {
     // Unicode 罗马数字 Ⅱ Ⅲ Ⅳ …
     m = raw.match(/[ⅡⅢⅣⅤⅥ]/);
     if (m) return ROMAN[m[0]] ?? null;
-    // ASCII 罗马数字 II III IV V VI（词边界，避免误配普通单词）
-    m = raw.match(/\b(II|III|IV|V|VI)\b/);
+    // ASCII 罗马数字 II III IV V VI（词边界，避免误配普通单词；跳过 Lupin III Part N 这类作品名）
+    m = raw.match(/\b(II|III|IV|V|VI)\b(?!\s*Part\b)/);
     if (m) return ROMAN[m[1]] ?? null;
-    // 「Show 2 - 03」：` - ` 两边必须有空格、排除前导零（01/05）、后跟数字时跳过（NN-NN 是范围）
-    m = raw.match(/(?:^|\s)([1-9]\d?)\s+-\s+\d{1,4}(?!\d)/);
+    // 「Show 2 - 03」：` - ` 两边必须有空格、排除前导零（01/05）、后跟数字时跳过（NN-NN 是范围）；
+    // 前面紧跟 No./Part/Vol./Ep 时跳过（这些是标题数字，不是季数）
+    m = raw.match(
+      /(?:^|\s)(?<!\b(?:No\.|Part|Vol\.?|Ep)\s)([1-9]\d?)\s+-\s+\d{1,4}(?!\d)/,
+    );
     if (m && +m[1] <= 12) return +m[1];
     return null;
   }

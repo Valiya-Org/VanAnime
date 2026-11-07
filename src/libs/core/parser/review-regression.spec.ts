@@ -125,4 +125,30 @@ describe('review regression (title + files → ParsedTitle + Jellyfin path)', ()
     expect(dm.season).toBe(4);
     expect(dm.title.romaji).toBe('Danmachi');
   });
+
+  it('F: 标题里的数字/罗马数字不会被误删', () => {
+    const a = service.parse('[Group] Kaiju No. 8 - 03 [1080p]');
+    expect(a.title.romaji).toBe('Kaiju No. 8');
+    expect(a.season).toBeNull();
+
+    const b = service.parse('[Group] Lupin III Part 6 - 03 [1080p]');
+    expect(b.title.romaji).toBe('Lupin III Part 6');
+    expect(b.season).toBeNull();
+
+    const c = service.parse('[Group] Mushoku Tensei 2 Part 2 - 03 [1080p]');
+    expect(c.title.romaji).toBe('Mushoku Tensei 2 Part 2');
+    expect(c.season).toBeNull();
+  });
+
+  it('G: 电影不输出集数（文件名不给补）', () => {
+    const mv = service.parse('天气之子 剧场版', [
+      f('[PV01].mkv'),
+      f('正片.mkv'),
+      f('[CM].mkv'),
+      f('[NCED_EP01].mkv'),
+      f('[Menu1].mkv'),
+    ]);
+    expect(mv.episodeType).toBe('Movie');
+    expect(mv.episode).toBeNull();
+  });
 });

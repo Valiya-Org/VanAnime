@@ -52,6 +52,11 @@ export class ParserService {
   }
 
   private applyFileSignals(parsed: ParsedTitle, signals: FileSignals): void {
+    // 电影不适用集数（正片/特典都不输出 episode），文件信号不改变电影解析、也不加置信
+    if (parsed.episodeType === 'Movie') {
+      return;
+    }
+
     // 1. 混合内容（视频+音频/图片/压缩包/文档）：
     //    标题已给出集数时保留（Scans/CDs 是附件，不是「合集」），仅降置信；
     //    标题无集数时才视为合集、不输出集数。
@@ -90,12 +95,8 @@ export class ParserService {
     }
 
     // 4. 无文件级集数但视频数 > 1 → 推断整季范围（低置信）。
-    //    电影（含特典/NCED/Menu 等多个视频文件）不适用集数，跳过。
-    if (
-      parsed.episode === null &&
-      parsed.episodeType !== 'Movie' &&
-      signals.videoCount > 1
-    ) {
+    //    电影已在函数开头 return，走到这里的一定是 TV/OVA/SP 等有集数的类型。
+    if (parsed.episode === null && signals.videoCount > 1) {
       parsed.episode = { kind: 'range', from: 1, to: signals.videoCount };
       parsed.confidence = Math.min(parsed.confidence, 0.6);
     }
